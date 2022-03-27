@@ -2,7 +2,8 @@
   "name": "solana-helpers",
   "version": "0.0.1",
   "description": "A collection of helper functions to make frontend dev for solana easier",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "echo nope",
     "build": "tsc",
