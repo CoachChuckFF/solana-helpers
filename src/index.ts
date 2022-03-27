@@ -21,7 +21,7 @@ const SolanaClusterMainnet = web3.clusterApiUrl('mainnet-beta');
 const SolanaConnectionDevnet = new web3.Connection(SolanaClusterDevnet, SolanaDefaultCommitment);
 const SolanaConnectionMainnet = new web3.Connection(SolanaClusterMainnet, SolanaDefaultCommitment);
 
-//Pass in window.solana
+// Pass in window.solana for wallet
 export const getSolanaProvider = (wallet: any, isDevnet: boolean = true) => {
     return new Provider(
         (isDevnet) ? SolanaConnectionDevnet : SolanaConnectionMainnet, 
@@ -59,7 +59,7 @@ export const getAssociatedTokenAddress = async (mint: web3.PublicKey, owner: web
     );
 }
 export const getAssociatedTokenAddressAndShouldCreate = async (provider: Provider, mint: web3.PublicKey, owner: web3.PublicKey, allowOffCurve?: boolean) => {
-    let vault = await getAssociatedTokenAddress( mint, owner, allowOffCurve );
+    const vault = await getAssociatedTokenAddress( mint, owner, allowOffCurve );
     let shouldCreate = false;
     try {
         await getSPLAccount(provider, mint, vault);
@@ -71,7 +71,7 @@ export const getAssociatedTokenAddressAndShouldCreate = async (provider: Provide
 }
 
 export const txSPL = async (provider: Provider,  mint: web3.PublicKey, to: web3.PublicKey, amount: number = 1) => {
-    let tx = new web3.Transaction();
+    const tx = new web3.Transaction();
     const owner = provider.wallet.publicKey;
     const ownerVault = await getAssociatedTokenAddress( mint, owner );
     const { vault, shouldCreate } = await getAssociatedTokenAddressAndShouldCreate( provider, mint, to );
@@ -106,11 +106,11 @@ export const txSPL = async (provider: Provider,  mint: web3.PublicKey, to: web3.
 }
 
 export const createSPL = async (provider: Provider, amount: number = 100000) => {
-    let mintKeypair = web3.Keypair.generate();
-    let mint = mintKeypair.publicKey;
-    let tx = new web3.Transaction();
-    let owner = provider.wallet.publicKey;
-    let vault = await getAssociatedTokenAddress( mint, owner );
+    const mintKeypair = web3.Keypair.generate();
+    const mint = mintKeypair.publicKey;
+    const tx = new web3.Transaction();
+    const owner = provider.wallet.publicKey;
+    const vault = await getAssociatedTokenAddress( mint, owner );
   
     // Create the Account
     tx.add(
