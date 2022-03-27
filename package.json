@@ -1,5 +1,5 @@
 {
-  "name": "solana-helpers",
+  "name": "@coach-chuck/solana-helpers",
   "version": "0.0.1",
   "description": "A collection of helper functions to make frontend dev for solana easier",
   "main": "lib/index.js",
