@@ -1,6 +1,6 @@
 {
   "name": "@coach-chuck/solana-helpers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A collection of helper functions to make frontend dev for solana easier",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
