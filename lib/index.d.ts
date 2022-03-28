@@ -22,4 +22,58 @@ export declare const getAssociatedTokenAddressAndShouldCreate: (provider: Provid
     shouldCreate: boolean;
 }>;
 export declare const txSPL: (provider: Provider, mint: web3.PublicKey, to: web3.PublicKey, amount?: number) => Promise<import("@solana/spl-token").AccountInfo>;
-export declare const createSPL: (provider: Provider, amount?: number) => Promise<import("@solana/spl-token").AccountInfo>;
+export declare const createSPL: (provider: Provider, amount?: number, decimals?: number, disableAfterMint?: boolean, newMintKeypair?: web3.Keypair) => Promise<import("@solana/spl-token").AccountInfo>;
+export declare const disableSPLMint: (provider: Provider, mint: web3.PublicKey) => Promise<void>;
+export declare enum MetaFileType {
+    png = "image/png",
+    jpeg = "image/jpeg",
+    glb = "application/octet-stream"
+}
+export declare enum MetaCatagoryType {
+    image = "image",
+    vr = "vr"
+}
+export interface MetaCollectionStruct {
+    name: string;
+    family: string;
+}
+export interface MetaAttributeStruct {
+    trait_type: string;
+    value: string;
+}
+export interface MetaPropertiesStruct {
+    files: MetaFileStruct[];
+    category: MetaCatagoryType | string;
+    creators: MetaCreatorStruct[];
+}
+export interface MetaFileStruct {
+    uri: string;
+    type: MetaFileType | string;
+}
+export interface MetaCreatorStruct {
+    address: string;
+    share: number;
+}
+export interface MetadataStruct {
+    name: string;
+    symbol: string;
+    description: string;
+    seller_fee_basis_points?: number;
+    collection: MetaCollectionStruct;
+    image: string;
+    animation_url?: string;
+    attributes: MetaAttributeStruct[];
+    external_url: string;
+    properties: MetaPropertiesStruct;
+}
+export declare const jsonToMetadata: (metadata: string) => MetadataStruct;
+export declare const metadataToJson: (metadata: MetadataStruct) => string;
+export declare const objToMetadata: (metadata: any) => MetadataStruct;
+export declare const TEST_SPL_URL: string;
+export declare const TEST_SPL_METADATA: MetadataStruct;
+export interface ImgSFTParams {
+    disableAfterMint?: boolean;
+    newCollectionKeypair?: web3.Keypair;
+}
+export declare const createImgSFT: (provider: Provider, metadataURL: string, metadata: MetadataStruct | string, amount: BN, params?: ImgSFTParams) => Promise<any>;
+export declare const sleep: (ms: number) => Promise<unknown>;
