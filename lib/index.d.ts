@@ -11,11 +11,24 @@ export declare const SIZE_U64 = 8;
 export declare const SIZE_U128 = 16;
 export declare const SIZE_STRING = 64;
 export declare const SPL_MINT_SPACE = 82;
+export declare enum SolanaCluster {
+    localhost = 0,
+    devnet = 1,
+    mainnet = 2
+}
+export declare const clusterToConnection: (cluster?: SolanaCluster, commitmentOrConfig?: web3.Commitment | web3.ConnectionConfig) => web3.Connection;
+export declare const initSolanaProvider: (wallet: any, cluster?: SolanaCluster, commitmentOrConfig?: web3.Commitment | web3.ConnectionConfig, opts?: web3.ConfirmOptions) => Provider;
+/**
+ * @deprecated The method should not be used, use initSolanaProvider instead
+ */
 export declare const getSolanaProvider: (wallet: any, isDevnet?: boolean) => Provider;
 export declare const getProgram: (provider: Provider, programID: web3.PublicKey) => Promise<Program<any>>;
 export declare const dateToSolanaDate: (date: Date) => BN;
 export declare const getRent: (provider: Provider, size: number) => Promise<number>;
-export declare const getSPLAccount: (provider: Provider, mint: web3.PublicKey, vault: web3.PublicKey) => Promise<import("@solana/spl-token").AccountInfo>;
+export declare const burnSPL: (provider: Provider, mint: web3.PublicKey, amount: BN, vault?: web3.PublicKey, allowOffCurve?: boolean) => Promise<void>;
+export declare const closeSPLAccount: (provider: Provider, mint: web3.PublicKey, vault?: web3.PublicKey, allowOffCurve?: boolean) => Promise<string>;
+export declare const burnFullToken: (provider: Provider, mint: web3.PublicKey, vault?: web3.PublicKey, allowOffCurve?: boolean) => Promise<string>;
+export declare const getSPLAccount: (provider: Provider, mint: web3.PublicKey, vault?: web3.PublicKey, allowOffCurve?: boolean) => Promise<import("@solana/spl-token").AccountInfo>;
 export declare const getAssociatedTokenAddress: (mint: web3.PublicKey, owner: web3.PublicKey, allowOffCurve?: boolean) => Promise<web3.PublicKey>;
 export declare const getAssociatedTokenAddressAndShouldCreate: (provider: Provider, mint: web3.PublicKey, owner: web3.PublicKey, allowOffCurve?: boolean) => Promise<{
     vault: web3.PublicKey;
@@ -58,22 +71,39 @@ export interface MetadataStruct {
     name: string;
     symbol: string;
     description: string;
-    seller_fee_basis_points?: number;
-    collection: MetaCollectionStruct;
     image: string;
     animation_url?: string;
-    attributes: MetaAttributeStruct[];
     external_url: string;
+    sellerFeeBasisPoints?: number;
+    attributes: MetaAttributeStruct[];
     properties: MetaPropertiesStruct;
+    collection: MetaCollectionStruct;
+}
+export interface SFTCollectionData {
+    owner: web3.PublicKey;
+    collectionMint: web3.PublicKey;
+    collectionMetadata: web3.PublicKey;
+    collectionMasterEdition: web3.PublicKey;
+}
+export interface SFTData {
+    vault: web3.PublicKey;
+    owner: web3.PublicKey;
+    mint: web3.PublicKey;
+    metadata: web3.PublicKey;
+    collectionData: SFTCollectionData;
 }
 export declare const jsonToMetadata: (metadata: string) => MetadataStruct;
 export declare const metadataToJson: (metadata: MetadataStruct) => string;
 export declare const objToMetadata: (metadata: any) => MetadataStruct;
 export declare const TEST_SPL_URL: string;
 export declare const TEST_SPL_METADATA: MetadataStruct;
-export interface ImgSFTParams {
-    disableAfterMint?: boolean;
-    newCollectionKeypair?: web3.Keypair;
-}
-export declare const createImgSFT: (provider: Provider, metadataURL: string, metadata: MetadataStruct | string, amount: BN, params?: ImgSFTParams) => Promise<any>;
+export declare const getMetadataMasterKey: (mint: web3.PublicKey) => Promise<web3.PublicKey>;
+export declare const getMetadataKey: (mint: web3.PublicKey) => Promise<web3.PublicKey>;
+export declare const getMetadataAccount: (provider: Provider, mint: web3.PublicKey) => Promise<any>;
+export declare const getMetadataMasterAccount: (provider: Provider, mint: web3.PublicKey) => Promise<any>;
+export declare const getCollectionData: (provider: Provider, mint: web3.PublicKey) => Promise<SFTCollectionData>;
+export declare const getSFTData: (provider: Provider, mint: web3.PublicKey, collectionMint?: web3.PublicKey) => Promise<SFTData>;
+export declare const createSFTCollection: (provider: Provider, symbol?: string, sellerFeeBasisPoints?: number) => Promise<SFTCollectionData>;
+export declare const createSFT: (provider: Provider, metadataURI: string, metadata: MetadataStruct | string, amount: BN, existingCollection?: SFTCollectionData) => Promise<SFTData>;
+export declare const updateSFT: (provider: Provider, sftMint: web3.PublicKey, metadata: MetadataStruct | string, primarySaleHappened?: boolean, isMutable?: boolean, newMetadataURI?: string, newUpdateAuthority?: web3.PublicKey) => Promise<SFTData>;
 export declare const sleep: (ms: number) => Promise<unknown>;
