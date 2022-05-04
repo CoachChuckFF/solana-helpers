@@ -50,26 +50,29 @@ export const clusterToConnection = (
  */
 export const connectWallet = (onlyIfTrusted?: boolean) => {
   return new Promise<web3.PublicKey>(async (resolve, reject) => {
-      try {
-          const { solana } = window as any;
-          if (solana) {
-              if (solana.isPhantom) {
-                  try {
-                      solana.connect({ onlyIfTrusted: onlyIfTrusted }).then((result:any)=>{
-                          resolve(new web3.PublicKey(result.publicKey.toString()));
-                      }).catch((error:any)=>{
-                          reject(`Error ${error}`);
-                      })
-                  } catch (error) {
-                      reject(`Error re-connecting to phantom. ${error}`);
-                  }
-              }
-          } else {
-              reject('Solana object not found! Get a Phantom Wallet 👻');
+    try {
+      const { solana } = window as any;
+      if (solana) {
+        if (solana.isPhantom) {
+          try {
+            solana
+              .connect({ onlyIfTrusted })
+              .then((result: any) => {
+                resolve(new web3.PublicKey(result.publicKey.toString()));
+              })
+              .catch((error: any) => {
+                reject(`Error ${error}`);
+              });
+          } catch (error) {
+            reject(`Error re-connecting to phantom. ${error}`);
           }
-      } catch (error) {
-          reject(error);
+        }
+      } else {
+        reject('Solana object not found! Get a Phantom Wallet 👻');
       }
+    } catch (error) {
+      reject(error);
+    }
   });
 };
 
@@ -79,7 +82,7 @@ export const connectWallet = (onlyIfTrusted?: boolean) => {
 export const getSolanaWallet = () => {
   const { solana } = window as any;
   return solana;
-}
+};
 
 /**
  * Creates a provider to pass into contract functions
@@ -102,15 +105,19 @@ export const getSolanaProvider = (wallet: any, isDevnet: boolean = true) => {
   });
 };
 
-export const createTestProvider = async (masterProvider: AnchorProvider, cluster: SolanaCluster = SolanaCluster.localhost, lamportsToStart: number = web3.LAMPORTS_PER_SOL, testKeypair: web3.Keypair = web3.Keypair.generate()) => {
-  if(cluster == SolanaCluster.mainnet){ throw new Error("Not for mainnet"); }
+export const createTestProvider = async (
+  masterProvider: AnchorProvider,
+  cluster: SolanaCluster = SolanaCluster.localhost,
+  lamportsToStart: number = web3.LAMPORTS_PER_SOL,
+  testKeypair: web3.Keypair = web3.Keypair.generate(),
+) => {
+  if (cluster === SolanaCluster.mainnet) {
+    throw new Error('Not for mainnet');
+  }
 
-  const provider = initSolanaProvider(
-    new NodeWallet(testKeypair),
-    cluster,
-  );
+  const provider = initSolanaProvider(new NodeWallet(testKeypair), cluster);
 
-  switch(cluster){
+  switch (cluster) {
     case SolanaCluster.devnet:
       await masterProvider.connection.requestAirdrop(provider.wallet.publicKey, lamportsToStart);
       break;
@@ -119,7 +126,7 @@ export const createTestProvider = async (masterProvider: AnchorProvider, cluster
   }
 
   return provider;
-}
+};
 
 export const getProgram = async (provider: AnchorProvider, programID: web3.PublicKey) => {
   const idl = await Program.fetchIdl(programID, provider);
@@ -241,10 +248,11 @@ export const getAssociatedTokenAddressAndShouldCreate = async (
   return { vault, shouldCreate };
 };
 
-
-
-export const txSOL = async (provider: AnchorProvider, to: web3.PublicKey, amount: number = web3.LAMPORTS_PER_SOL / 100) => {
-
+export const txSOL = async (
+  provider: AnchorProvider,
+  to: web3.PublicKey,
+  amount: number = web3.LAMPORTS_PER_SOL / 100,
+) => {
   const tx = new web3.Transaction().add(
     web3.SystemProgram.transfer({
       fromPubkey: provider.wallet.publicKey,
@@ -255,7 +263,7 @@ export const txSOL = async (provider: AnchorProvider, to: web3.PublicKey, amount
 
   await provider.sendAndConfirm(tx);
 
-  return await provider.connection.getAccountInfo(to)
+  return await provider.connection.getAccountInfo(to);
 };
 
 export const txSPL = async (provider: AnchorProvider, mint: web3.PublicKey, to: web3.PublicKey, amount: number = 1) => {
