@@ -1,6 +1,7 @@
 import { Token, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout } from '@solana/spl-token';
-import { Program, Provider, BN, web3 } from '@project-serum/anchor';
+import { Program, AnchorProvider, BN, web3 } from '@project-serum/anchor';
 import * as meta from '@metaplex/js';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 // --------- SOLANA TOOLS -----------------------------------------
 export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
@@ -44,25 +45,83 @@ export const clusterToConnection = (
   }
 };
 
+/**
+ * For web-based wallets only
+ */
+export const connectWallet = (onlyIfTrusted?: boolean) => {
+  return new Promise<web3.PublicKey>(async (resolve, reject) => {
+      try {
+          const { solana } = window as any;
+          if (solana) {
+              if (solana.isPhantom) {
+                  try {
+                      solana.connect({ onlyIfTrusted: onlyIfTrusted }).then((result:any)=>{
+                          resolve(new web3.PublicKey(result.publicKey.toString()));
+                      }).catch((error:any)=>{
+                          reject(`Error ${error}`);
+                      })
+                  } catch (error) {
+                      reject(`Error re-connecting to phantom. ${error}`);
+                  }
+              }
+          } else {
+              reject('Solana object not found! Get a Phantom Wallet 👻');
+          }
+      } catch (error) {
+          reject(error);
+      }
+  });
+};
+
+/**
+ * For web-based wallets only
+ */
+export const getSolanaWallet = () => {
+  const { solana } = window as any;
+  return solana;
+}
+
+/**
+ * Creates a provider to pass into contract functions
+ */
 export const initSolanaProvider = (
-  wallet: any,
+  wallet: any = getSolanaWallet(),
   cluster: SolanaCluster = SolanaCluster.mainnet,
   commitmentOrConfig: web3.Commitment | web3.ConnectionConfig = SolanaDefaultCommitment,
   opts: web3.ConfirmOptions = { commitment: SolanaDefaultCommitment },
 ) => {
-  return new Provider(clusterToConnection(cluster, commitmentOrConfig), wallet, opts);
+  return new AnchorProvider(clusterToConnection(cluster, commitmentOrConfig), wallet, opts);
 };
 
 /**
  * @deprecated The method should not be used, use initSolanaProvider instead
  */
 export const getSolanaProvider = (wallet: any, isDevnet: boolean = true) => {
-  return new Provider(isDevnet ? SolanaConnectionDevnet : SolanaConnectionMainnet, wallet, {
+  return new AnchorProvider(isDevnet ? SolanaConnectionDevnet : SolanaConnectionMainnet, wallet, {
     commitment: SolanaDefaultCommitment,
   });
 };
 
-export const getProgram = async (provider: Provider, programID: web3.PublicKey) => {
+export const createTestProvider = async (masterProvider: AnchorProvider, cluster: SolanaCluster = SolanaCluster.localhost, lamportsToStart: number = web3.LAMPORTS_PER_SOL, testKeypair: web3.Keypair = web3.Keypair.generate()) => {
+  if(cluster == SolanaCluster.mainnet){ throw new Error("Not for mainnet"); }
+
+  const provider = initSolanaProvider(
+    new NodeWallet(testKeypair),
+    cluster,
+  );
+
+  switch(cluster){
+    case SolanaCluster.devnet:
+      await masterProvider.connection.requestAirdrop(provider.wallet.publicKey, lamportsToStart);
+      break;
+    case SolanaCluster.localhost:
+      await txSOL(masterProvider, provider.wallet.publicKey, lamportsToStart);
+  }
+
+  return provider;
+}
+
+export const getProgram = async (provider: AnchorProvider, programID: web3.PublicKey) => {
   const idl = await Program.fetchIdl(programID, provider);
   return new Program(idl as any, programID, provider);
 };
@@ -71,13 +130,13 @@ export const dateToSolanaDate = (date: Date) => {
   return new BN(Math.floor(date.getTime() / 1000));
 };
 
-export const getRent = (provider: Provider, size: number) => {
+export const getRent = (provider: AnchorProvider, size: number) => {
   return provider.connection.getMinimumBalanceForRentExemption(size);
 };
 
 // --------- SPL TOOLS -----------------------------------------
 export const burnSPL = async (
-  provider: Provider,
+  provider: AnchorProvider,
   mint: web3.PublicKey,
   amount: BN,
   vault?: web3.PublicKey,
@@ -88,11 +147,11 @@ export const burnSPL = async (
 
   tx.add(Token.createBurnInstruction(TOKEN_PROGRAM_ID, mint, ata, provider.wallet.publicKey, [], amount));
 
-  await provider.send(tx);
+  await provider.sendAndConfirm(tx);
 };
 
 export const closeSPLAccount = async (
-  provider: Provider,
+  provider: AnchorProvider,
   mint: web3.PublicKey,
   vault?: web3.PublicKey,
   allowOffCurve?: boolean,
@@ -110,11 +169,11 @@ export const closeSPLAccount = async (
     ),
   );
 
-  return await provider.send(tx);
+  return await provider.sendAndConfirm(tx);
 };
 
 export const burnFullToken = async (
-  provider: Provider,
+  provider: AnchorProvider,
   mint: web3.PublicKey,
   vault?: web3.PublicKey,
   allowOffCurve?: boolean,
@@ -145,11 +204,11 @@ export const burnFullToken = async (
     ),
   );
 
-  return await provider.send(tx);
+  return await provider.sendAndConfirm(tx);
 };
 
 export const getSPLAccount = async (
-  provider: Provider,
+  provider: AnchorProvider,
   mint: web3.PublicKey,
   vault?: web3.PublicKey,
   allowOffCurve?: boolean,
@@ -166,7 +225,7 @@ export const getAssociatedTokenAddress = async (
   return Token.getAssociatedTokenAddress(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, mint, owner, allowOffCurve);
 };
 export const getAssociatedTokenAddressAndShouldCreate = async (
-  provider: Provider,
+  provider: AnchorProvider,
   mint: web3.PublicKey,
   owner: web3.PublicKey,
   allowOffCurve?: boolean,
@@ -182,7 +241,24 @@ export const getAssociatedTokenAddressAndShouldCreate = async (
   return { vault, shouldCreate };
 };
 
-export const txSPL = async (provider: Provider, mint: web3.PublicKey, to: web3.PublicKey, amount: number = 1) => {
+
+
+export const txSOL = async (provider: AnchorProvider, to: web3.PublicKey, amount: number = web3.LAMPORTS_PER_SOL / 100) => {
+
+  const tx = new web3.Transaction().add(
+    web3.SystemProgram.transfer({
+      fromPubkey: provider.wallet.publicKey,
+      toPubkey: to,
+      lamports: amount,
+    }),
+  );
+
+  await provider.sendAndConfirm(tx);
+
+  return await provider.connection.getAccountInfo(to)
+};
+
+export const txSPL = async (provider: AnchorProvider, mint: web3.PublicKey, to: web3.PublicKey, amount: number = 1) => {
   const tx = new web3.Transaction();
   const owner = provider.wallet.publicKey;
   const ownerVault = await getAssociatedTokenAddress(mint, owner);
@@ -203,13 +279,13 @@ export const txSPL = async (provider: Provider, mint: web3.PublicKey, to: web3.P
 
   tx.add(Token.createTransferInstruction(TOKEN_PROGRAM_ID, ownerVault, vault, owner, [], amount));
 
-  await provider.send(tx);
+  await provider.sendAndConfirm(tx);
 
   return await getSPLAccount(provider, mint, vault);
 };
 
 export const createSPL = async (
-  provider: Provider,
+  provider: AnchorProvider,
   amount: number = 100000,
   decimals?: number,
   disableAfterMint?: boolean,
@@ -251,7 +327,7 @@ export const createSPL = async (
   // Mint
   tx.add(Token.createMintToInstruction(TOKEN_PROGRAM_ID, mint, vault, owner, [], amount));
 
-  await provider.send(tx, [mintKeypair]);
+  await provider.sendAndConfirm(tx, [mintKeypair]);
 
   // Disable
   if (disableAfterMint) {
@@ -261,7 +337,7 @@ export const createSPL = async (
   return await getSPLAccount(provider, mint, vault);
 };
 
-export const disableSPLMint = async (provider: Provider, mint: web3.PublicKey) => {
+export const disableSPLMint = async (provider: AnchorProvider, mint: web3.PublicKey) => {
   const owner = provider.wallet.publicKey;
   const vault = await getAssociatedTokenAddress(mint, owner);
 
@@ -269,7 +345,7 @@ export const disableSPLMint = async (provider: Provider, mint: web3.PublicKey) =
 
   tx.add(Token.createSetAuthorityInstruction(TOKEN_PROGRAM_ID, mint, null, 'MintTokens', owner, []));
 
-  await provider.send(tx);
+  await provider.sendAndConfirm(tx);
 };
 
 // --------- SFT HELPERS -----------------------------------------
@@ -388,7 +464,7 @@ export const getMetadataKey = async (mint: web3.PublicKey) => {
   return (await meta.programs.metadata.MetadataProgram.findMetadataAccount(mint))[0];
 };
 
-export const getMetadataAccount = async (provider: Provider, mint: web3.PublicKey) => {
+export const getMetadataAccount = async (provider: AnchorProvider, mint: web3.PublicKey) => {
   return await meta.programs.metadata.MetadataData.deserialize(
     (
       await provider.connection.getAccountInfo(await getMetadataKey(mint))
@@ -396,7 +472,7 @@ export const getMetadataAccount = async (provider: Provider, mint: web3.PublicKe
   );
 };
 
-export const getMetadataMasterAccount = async (provider: Provider, mint: web3.PublicKey) => {
+export const getMetadataMasterAccount = async (provider: AnchorProvider, mint: web3.PublicKey) => {
   return await meta.programs.metadata.EditionData.deserialize(
     (
       await provider.connection.getAccountInfo(await getMetadataMasterKey(mint))
@@ -404,7 +480,7 @@ export const getMetadataMasterAccount = async (provider: Provider, mint: web3.Pu
   );
 };
 
-export const getCollectionData = async (provider: Provider, mint: web3.PublicKey) => {
+export const getCollectionData = async (provider: AnchorProvider, mint: web3.PublicKey) => {
   return {
     owner: provider.wallet.publicKey,
     collectionMint: mint,
@@ -413,7 +489,7 @@ export const getCollectionData = async (provider: Provider, mint: web3.PublicKey
   } as SFTCollectionData;
 };
 
-export const getSFTData = async (provider: Provider, mint: web3.PublicKey, collectionMint?: web3.PublicKey) => {
+export const getSFTData = async (provider: AnchorProvider, mint: web3.PublicKey, collectionMint?: web3.PublicKey) => {
   let metadataAccount = {} as any;
   if (!collectionMint) {
     metadataAccount = await getMetadataAccount(provider, mint);
@@ -429,7 +505,7 @@ export const getSFTData = async (provider: Provider, mint: web3.PublicKey, colle
   } as SFTData;
 };
 
-export const createSFTCollection = async (provider: Provider, symbol?: string, sellerFeeBasisPoints?: number) => {
+export const createSFTCollection = async (provider: AnchorProvider, symbol?: string, sellerFeeBasisPoints?: number) => {
   const owner = provider.wallet.publicKey;
 
   const collectionSPL = await createSPL(provider, 1);
@@ -481,13 +557,13 @@ export const createSFTCollection = async (provider: Provider, symbol?: string, s
     ).instructions,
   );
 
-  await provider.send(tx);
+  await provider.sendAndConfirm(tx);
 
   return await getCollectionData(provider, collectionSPL.mint);
 };
 
 export const createSFT = async (
-  provider: Provider,
+  provider: AnchorProvider,
   metadataURI: string,
   metadata: MetadataStruct | string,
   amount: BN,
@@ -580,7 +656,7 @@ export const createSFT = async (
     },
   );
 
-  await provider.send(createMetaTx);
+  await provider.sendAndConfirm(createMetaTx);
 
   // Verify Collection
   const verifyCollectionTx = new meta.programs.metadata.VerifyCollection(
@@ -593,7 +669,7 @@ export const createSFT = async (
       collectionMasterEdition: collectionData.collectionMasterEdition,
     },
   );
-  await provider.send(verifyCollectionTx);
+  await provider.sendAndConfirm(verifyCollectionTx);
 
   const signMetadataTX = new meta.programs.metadata.SignMetadata(
     { feePayer: owner },
@@ -602,7 +678,7 @@ export const createSFT = async (
       creator: owner,
     },
   );
-  await provider.send(signMetadataTX);
+  await provider.sendAndConfirm(signMetadataTX);
 
   await getMetadataAccount(provider, splToken.mint);
 
@@ -622,7 +698,7 @@ export const createSFT = async (
 // }
 
 export const updateSFT = async (
-  provider: Provider,
+  provider: AnchorProvider,
   sftMint: web3.PublicKey,
   metadata: MetadataStruct | string,
   primarySaleHappened?: boolean,
@@ -697,7 +773,7 @@ export const updateSFT = async (
     },
   );
 
-  await provider.send(updateMetadataTx);
+  await provider.sendAndConfirm(updateMetadataTx);
 
   // Verify Collection
   const verifyCollectionTx = new meta.programs.metadata.VerifyCollection(
@@ -710,7 +786,7 @@ export const updateSFT = async (
       collectionMasterEdition: sft.collectionData.collectionMasterEdition,
     },
   );
-  await provider.send(verifyCollectionTx);
+  await provider.sendAndConfirm(verifyCollectionTx);
 
   return await getSFTData(provider, sftMint);
 };
