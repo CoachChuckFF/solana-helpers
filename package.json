@@ -1,11 +1,11 @@
 {
   "name": "@coach-chuck/solana-helpers",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "A collection of helper functions to make frontend dev for solana easier",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "echo nope",
+    "test": "ts-node src/__tests__/test.ts",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",

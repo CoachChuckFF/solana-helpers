@@ -1,7 +1,7 @@
 import { Token, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout } from '@solana/spl-token';
 import { Program, AnchorProvider, BN, web3 } from '@project-serum/anchor';
 import * as meta from '@metaplex/js';
-import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { NodeWallet } from '@metaplex/js';
 
 // --------- SOLANA TOOLS -----------------------------------------
 export const ACCOUNT_DISCRIMINATOR_SIZE = 8;
@@ -16,12 +16,15 @@ export const SIZE_STRING = 64;
 
 export const SPL_MINT_SPACE = 82;
 
-const SolanaDefaultCommitment = 'processed';
-const SolanaClusterDevnet = web3.clusterApiUrl('devnet');
-const SolanaClusterMainnet = web3.clusterApiUrl('mainnet-beta');
-const SolanaClusterLocalnet = 'http://localhost:8899';
-const SolanaConnectionDevnet = new web3.Connection(SolanaClusterDevnet, SolanaDefaultCommitment);
-const SolanaConnectionMainnet = new web3.Connection(SolanaClusterMainnet, SolanaDefaultCommitment);
+export const SolanaDefaultCommitment = 'processed';
+export const SolanaClusterDevnet = web3.clusterApiUrl('devnet');
+export const SolanaClusterMainnet = web3.clusterApiUrl('mainnet-beta');
+export const SolanaClusterLocalnet = 'http://localhost:8899';
+export const SolanaConnectionDevnet = new web3.Connection(SolanaClusterDevnet, SolanaDefaultCommitment);
+export const SolanaConnectionMainnet = new web3.Connection(SolanaClusterMainnet, SolanaDefaultCommitment);
+
+export const TestStartString = '🚀 Starting test...';
+export const TestEndString = '... to the moon! 🌑';
 
 export enum SolanaCluster {
   localhost,
@@ -43,6 +46,30 @@ export const clusterToConnection = (
     default:
       return SolanaConnectionDevnet;
   }
+};
+
+export const runInSandbox = async (code: any) => {
+  try {
+    await code();
+    process.exit(0);
+  } catch (error) {
+    process.exit(1);
+  }
+};
+
+/**
+ * pass in fullpath to keypair /Home/.config/solana/program/test.json
+ */
+export const initSolanaProviderFromLocalKeypair = (
+  fullpath: string,
+  cluster: SolanaCluster = SolanaCluster.mainnet,
+  commitmentOrConfig: web3.Commitment | web3.ConnectionConfig = SolanaDefaultCommitment,
+  opts: web3.ConfirmOptions = { commitment: SolanaDefaultCommitment },
+) => {
+  const secretArray = require(fullpath);
+  const secret = new Uint8Array(secretArray);
+  const payerKeypair = web3.Keypair.fromSecretKey(secret);
+  return initSolanaProvider(new NodeWallet(payerKeypair), cluster, commitmentOrConfig, opts);
 };
 
 /**

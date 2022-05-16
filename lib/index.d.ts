@@ -12,12 +12,25 @@ export declare const SIZE_U64 = 8;
 export declare const SIZE_U128 = 16;
 export declare const SIZE_STRING = 64;
 export declare const SPL_MINT_SPACE = 82;
+export declare const SolanaDefaultCommitment = "processed";
+export declare const SolanaClusterDevnet: string;
+export declare const SolanaClusterMainnet: string;
+export declare const SolanaClusterLocalnet = "http://localhost:8899";
+export declare const SolanaConnectionDevnet: web3.Connection;
+export declare const SolanaConnectionMainnet: web3.Connection;
+export declare const TestStartString = "\uD83D\uDE80 Starting test...";
+export declare const TestEndString = "... to the moon! \uD83C\uDF11";
 export declare enum SolanaCluster {
     localhost = 0,
     devnet = 1,
     mainnet = 2
 }
 export declare const clusterToConnection: (cluster?: SolanaCluster, commitmentOrConfig?: web3.Commitment | web3.ConnectionConfig) => web3.Connection;
+export declare const runInSandbox: (code: any) => Promise<never>;
+/**
+ * pass in fullpath to keypair /Home/.config/solana/program/test.json
+ */
+export declare const initSolanaProviderFromLocalKeypair: (fullpath: string, cluster?: SolanaCluster, commitmentOrConfig?: web3.Commitment | web3.ConnectionConfig, opts?: web3.ConfirmOptions) => AnchorProvider;
 /**
  * For web-based wallets only
  */
